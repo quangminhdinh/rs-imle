@@ -67,7 +67,7 @@ def add_imle_arguments(parser):
     parser.add_argument('--lr', type=float, default=0.0002)  # learning rate
 
     parser.add_argument('--wd', type=float, default=0.00)  # weight decay
-    parser.add_argument('--num_epochs', type=int, default=10000)  # number of epochs
+    parser.add_argument('--num_epochs', type=int, default=15000)  # number of epochs
     parser.add_argument('--n_batch', type=int, default=8)  # batch size
     parser.add_argument('--adam_beta1', type=float, default=0.9)
     parser.add_argument('--adam_beta2', type=float, default=0.9)
@@ -91,7 +91,7 @@ def add_imle_arguments(parser):
     parser.add_argument('--proj_proportion', type=int, default=1)  # whether to use projection proportional to the lpips feature dimensions for nearest neighbour search
     parser.add_argument('--lpips_coef', type=float, default=1.0)  # lpips loss coefficient
     parser.add_argument('--l2_coef', type=float, default=0.1)  # l2 loss coefficient
-    parser.add_argument('--force_factor', type=float, default=10)  # sampling factor for imle, i.e., force_factor * len(dataset)
+    parser.add_argument('--force_factor', type=float, default=20)  # sampling factor for imle, i.e., force_factor * len(dataset)
 
     parser.add_argument('--n_mpl', type=int, default=8)  # mapping network layers
 
@@ -115,7 +115,7 @@ def add_imle_arguments(parser):
     parser.add_argument('--knn_ignore', type=int, default=5)  # knn ignore for RSIMLE
 
     # AdaIMLE specific arguments
-    parser.add_argument('--use_adaptive', default=True, type=lambda x: bool(strtobool(x)))  # whether to use adaptive imle
+    parser.add_argument('--use_adaptive', default=False, type=lambda x: bool(strtobool(x)))  # whether to use adaptive imle
     parser.add_argument('--change_coef', type=float, default=0.04)  # \gamma in the AdaIMLE paper, rate of change of the thresholds, tau_i
     parser.add_argument('--change_threshold', type=float, default=1)  # starting threshold
     parser.add_argument('--imle_staleness', type=int, default=7)  # imle staleness, i.e., number of iterations to wait before considering the thresholds, tau_i
