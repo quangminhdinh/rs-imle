@@ -68,7 +68,7 @@ def add_imle_arguments(parser):
 
     parser.add_argument('--wd', type=float, default=0.00)  # weight decay
     parser.add_argument('--num_epochs', type=int, default=10000)  # number of epochs
-    parser.add_argument('--n_batch', type=int, default=4)  # batch size
+    parser.add_argument('--n_batch', type=int, default=8)  # batch size
     parser.add_argument('--adam_beta1', type=float, default=0.9)
     parser.add_argument('--adam_beta2', type=float, default=0.9)
 
@@ -110,8 +110,8 @@ def add_imle_arguments(parser):
     parser.add_argument('--l2_search_downsample', type=float, default=1.0) # downsample factor for l2 search
 
     # RSIMLE specific arguments
-    parser.add_argument('--use_rsimle', default=False, type=lambda x: bool(strtobool(x)))  # whether to use spatial noise
-    parser.add_argument('--eps_radius', type=float, default=0.1)  # hyperparameter for RSIMLE, i.e., \epsilon in the paper
+    parser.add_argument('--use_rsimle', default=True, type=lambda x: bool(strtobool(x)))  # whether to use spatial noise
+    parser.add_argument('--eps_radius', type=float, default=0.12)  # hyperparameter for RSIMLE, i.e., \epsilon in the paper
     parser.add_argument('--knn_ignore', type=int, default=5)  # knn ignore for RSIMLE
 
     # AdaIMLE specific arguments
