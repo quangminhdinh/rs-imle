@@ -111,8 +111,8 @@ def add_imle_arguments(parser):
 
     # RSIMLE specific arguments
     parser.add_argument('--use_rsimle', default=False, type=lambda x: bool(strtobool(x)))  # whether to use spatial noise
-    parser.add_argument('--eps_radius', type=float, default=0.1)  # angle to splatter
-    parser.add_argument('--knn_ignore', type=int, default=5)  # whether to use spatial noise
+    parser.add_argument('--eps_radius', type=float, default=0.1)  # hyperparameter for RSIMLE, i.e., \epsilon in the paper
+    parser.add_argument('--knn_ignore', type=int, default=5)  # knn ignore for RSIMLE
 
     # AdaIMLE specific arguments
     parser.add_argument('--use_adaptive', default=True, type=lambda x: bool(strtobool(x)))  # whether to use adaptive imle

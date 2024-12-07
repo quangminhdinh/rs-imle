@@ -12,7 +12,6 @@ from models import parse_layer_string
 
 def set_up_data(H):
     
-    H.angle_rad = torch.deg2rad(torch.tensor(H.angle))
     blocks = parse_layer_string(H.dec_blocks)
     H.block_res = [s[0] for s in blocks]
     H.res = sorted(set([s[0] for s in blocks if s[0] <= H.max_hierarchy]))
