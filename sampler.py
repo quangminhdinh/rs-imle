@@ -8,7 +8,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader, TensorDataset
 
 from LPNet import LPNet
-from dciknn_cuda import DCI, MDCI
+import faiss
 from torch.optim import AdamW
 from helpers.utils import ZippedDataset
 from models import parse_layer_string
@@ -97,6 +97,10 @@ class Sampler:
 
         self.dci_dim = sum_dims
         print('dci_dim', self.dci_dim)
+
+        self.faiss_res = faiss.StandardGpuResources()  # one per process
+        index_flat = faiss.IndexFlatL2(self.dci_dim)  # identical API to IndexFlatL2
+        self.gpu_index_flat = faiss.index_cpu_to_gpu(self.faiss_res, 0, index_flat)
 
         self.temp_samples_proj = torch.empty([self.H.imle_db_size, sum_dims], dtype=torch.float32).cuda()
         self.dataset_proj = torch.empty([sz, sum_dims], dtype=torch.float32)
@@ -317,70 +321,70 @@ class Sampler:
                 dists[batch_slice] = torch.squeeze(dist)
         return dists
 
-    def imle_sample(self, dataset, gen, factor=None):
-        if factor is None:
-            factor = self.H.imle_factor
-        imle_pool_size = int(len(dataset) * factor)
-        t1 = time.time()
-        self.selected_dists_tmp[:] = self.selected_dists[:]
-        for i in range((imle_pool_size // self.H.imle_db_size)+1):
-            self.temp_latent_rnds.normal_()
-            for j in range(len(self.res)):
-                if(self.H.use_snoise == True):
-                    self.snoise_tmp[j].normal_()
-            for j in range(self.H.imle_db_size // self.H.imle_batch):
-                batch_slice = slice(j * self.H.imle_batch, (j + 1) * self.H.imle_batch)
-                cur_latents = self.temp_latent_rnds[batch_slice]
-                cur_snoise = [x[batch_slice] for x in self.snoise_tmp]
-                with torch.no_grad():
-                    self.temp_samples[batch_slice] = gen(cur_latents, cur_snoise)
-                    if(self.H.search_type == 'lpips'):
-                        self.temp_samples_proj[batch_slice] = self.get_projected(self.temp_samples[batch_slice], False)
-                    elif(self.H.search_type == 'l2'):
-                        self.temp_samples_proj[batch_slice] = self.get_l2_feature(self.temp_samples[batch_slice], False)
-                    else:
-                        self.temp_samples_proj[batch_slice] = self.get_combined_feature(self.temp_samples[batch_slice], False)
+    # def imle_sample(self, dataset, gen, factor=None):
+    #     if factor is None:
+    #         factor = self.H.imle_factor
+    #     imle_pool_size = int(len(dataset) * factor)
+    #     t1 = time.time()
+    #     self.selected_dists_tmp[:] = self.selected_dists[:]
+    #     for i in range((imle_pool_size // self.H.imle_db_size)+1):
+    #         self.temp_latent_rnds.normal_()
+    #         for j in range(len(self.res)):
+    #             if(self.H.use_snoise == True):
+    #                 self.snoise_tmp[j].normal_()
+    #         for j in range(self.H.imle_db_size // self.H.imle_batch):
+    #             batch_slice = slice(j * self.H.imle_batch, (j + 1) * self.H.imle_batch)
+    #             cur_latents = self.temp_latent_rnds[batch_slice]
+    #             cur_snoise = [x[batch_slice] for x in self.snoise_tmp]
+    #             with torch.no_grad():
+    #                 self.temp_samples[batch_slice] = gen(cur_latents, cur_snoise)
+    #                 if(self.H.search_type == 'lpips'):
+    #                     self.temp_samples_proj[batch_slice] = self.get_projected(self.temp_samples[batch_slice], False)
+    #                 elif(self.H.search_type == 'l2'):
+    #                     self.temp_samples_proj[batch_slice] = self.get_l2_feature(self.temp_samples[batch_slice], False)
+    #                 else:
+    #                     self.temp_samples_proj[batch_slice] = self.get_combined_feature(self.temp_samples[batch_slice], False)
 
-            if not gen.module.dci_db:
-                device_count = torch.cuda.device_count()
-                gen.module.dci_db = MDCI(self.temp_samples_proj.shape[1], num_comp_indices=self.H.num_comp_indices,
-                                            num_simp_indices=self.H.num_simp_indices, devices=[i for i in range(device_count)], ts=device_count)
+    #         if not gen.module.dci_db:
+    #             device_count = torch.cuda.device_count()
+    #             gen.module.dci_db = MDCI(self.temp_samples_proj.shape[1], num_comp_indices=self.H.num_comp_indices,
+    #                                         num_simp_indices=self.H.num_simp_indices, devices=[i for i in range(device_count)], ts=device_count)
 
-                # gen.module.dci_db = DCI(self.temp_samples_proj.shape[1], num_comp_indices=self.H.num_comp_indices,
-                                            # num_simp_indices=self.H.num_simp_indices)
-            gen.module.dci_db.add(self.temp_samples_proj)
+    #             # gen.module.dci_db = DCI(self.temp_samples_proj.shape[1], num_comp_indices=self.H.num_comp_indices,
+    #                                         # num_simp_indices=self.H.num_simp_indices)
+    #         gen.module.dci_db.add(self.temp_samples_proj)
 
-            t0 = time.time()
-            for ind, y in enumerate(DataLoader(dataset, batch_size=self.H.imle_batch)):
-                # t2 = time.time()
-                _, target = self.preprocess_fn(y)
-                x = self.dataset_proj[ind * self.H.imle_batch:ind * self.H.imle_batch + target.shape[0]]
-                cur_batch_data_flat = x.float()
-                nearest_indices, _ = gen.module.dci_db.query(cur_batch_data_flat, num_neighbours=1)
-                nearest_indices = nearest_indices.long()[:, 0]
+    #         t0 = time.time()
+    #         for ind, y in enumerate(DataLoader(dataset, batch_size=self.H.imle_batch)):
+    #             # t2 = time.time()
+    #             _, target = self.preprocess_fn(y)
+    #             x = self.dataset_proj[ind * self.H.imle_batch:ind * self.H.imle_batch + target.shape[0]]
+    #             cur_batch_data_flat = x.float()
+    #             nearest_indices, _ = gen.module.dci_db.query(cur_batch_data_flat, num_neighbours=1)
+    #             nearest_indices = nearest_indices.long()[:, 0]
 
-                batch_slice = slice(ind * self.H.imle_batch, ind * self.H.imle_batch + x.size()[0])
-                actual_selected_dists = self.calc_loss(target.permute(0, 3, 1, 2),
-                                                       self.temp_samples[nearest_indices].cuda(), use_mean=False)
-                # actual_selected_dists = torch.squeeze(actual_selected_dists)
+    #             batch_slice = slice(ind * self.H.imle_batch, ind * self.H.imle_batch + x.size()[0])
+    #             actual_selected_dists = self.calc_loss(target.permute(0, 3, 1, 2),
+    #                                                    self.temp_samples[nearest_indices].cuda(), use_mean=False)
+    #             # actual_selected_dists = torch.squeeze(actual_selected_dists)
 
-                to_update = torch.nonzero(actual_selected_dists < self.selected_dists[batch_slice], as_tuple=False)
-                to_update = torch.squeeze(to_update)
-                self.selected_dists[ind * self.H.imle_batch + to_update] = actual_selected_dists[to_update].clone()
-                self.selected_latents[ind * self.H.imle_batch + to_update] = self.temp_latent_rnds[nearest_indices[to_update]].clone()
-                for k in range(len(self.res)):
-                    self.selected_snoise[k][ind * self.H.imle_batch + to_update] = self.snoise_tmp[k][nearest_indices[to_update]].clone()
+    #             to_update = torch.nonzero(actual_selected_dists < self.selected_dists[batch_slice], as_tuple=False)
+    #             to_update = torch.squeeze(to_update)
+    #             self.selected_dists[ind * self.H.imle_batch + to_update] = actual_selected_dists[to_update].clone()
+    #             self.selected_latents[ind * self.H.imle_batch + to_update] = self.temp_latent_rnds[nearest_indices[to_update]].clone()
+    #             for k in range(len(self.res)):
+    #                 self.selected_snoise[k][ind * self.H.imle_batch + to_update] = self.snoise_tmp[k][nearest_indices[to_update]].clone()
 
-                del cur_batch_data_flat
+    #             del cur_batch_data_flat
 
-            gen.module.dci_db.clear()
+    #         gen.module.dci_db.clear()
 
-        # adding perturbation
-        changed = torch.sum(self.selected_dists_tmp != self.selected_dists).item()
-        print("Samples and NN are calculated, time: {}, mean: {} # changed: {}, {}%".format(time.time() - t1,
-                                                                                            self.selected_dists.mean(),
-                                                                                            changed, (changed / len(
-                dataset)) * 100))
+    #     # adding perturbation
+    #     changed = torch.sum(self.selected_dists_tmp != self.selected_dists).item()
+    #     print("Samples and NN are calculated, time: {}, mean: {} # changed: {}, {}%".format(time.time() - t1,
+    #                                                                                         self.selected_dists.mean(),
+    #                                                                                         changed, (changed / len(
+    #             dataset)) * 100))
 
     def resample_pool(self, gen, ds):
         # self.init_projection(ds)
@@ -427,12 +431,12 @@ class Sampler:
             with torch.no_grad():
                 for i in range(self.pool_size // self.H.imle_db_size):
                     pool_slice = slice(i * self.H.imle_db_size, (i + 1) * self.H.imle_db_size)
-                    if not gen.module.dci_db:
-                        device_count = torch.cuda.device_count()
-                        gen.module.dci_db = MDCI(self.dci_dim, num_comp_indices=self.H.num_comp_indices,
-                                                    num_simp_indices=self.H.num_simp_indices, 
-                                                    devices=[i for i in range(device_count)])
-                    gen.module.dci_db.add(self.pool_samples_proj[pool_slice])
+                    # if not gen.module.dci_db:
+                    #     device_count = torch.cuda.device_count()
+                    #     gen.module.dci_db = MDCI(self.dci_dim, num_comp_indices=self.H.num_comp_indices,
+                    #                                 num_simp_indices=self.H.num_simp_indices, 
+                    #                                 devices=[i for i in range(device_count)])
+                    self.gpu_index_flat.add(self.pool_samples_proj[pool_slice])
                     pool_latents = self.pool_latents[pool_slice]
                     snoise_pool = [b[pool_slice] for b in self.snoise_pool]
 
@@ -443,14 +447,17 @@ class Sampler:
                         batch_slice = slice(ind * self.H.imle_batch, ind * self.H.imle_batch + target.shape[0])
                         indices = to_update[batch_slice]
                         x = self.dataset_proj[indices]
-                        nearest_indices, dci_dists = gen.module.dci_db.query(x.float(), num_neighbours=self.H.knn_ignore)
-                        nearest_indices = nearest_indices.long()
+                        query = x.cpu().numpy().astype('float32')
+                        dci_dists, nearest_indices = self.gpu_index_flat.search(query, 1)
+                        dci_dists = torch.from_numpy(dci_dists).squeeze(1)  # (local_size,)
+                        nearest_indices   = torch.from_numpy(nearest_indices).squeeze(1).long()    # (local_size,)
+
                         check = dci_dists < self.H.eps_radius 
                         easy_samples_list = torch.unique(nearest_indices[check])
                         self.pool_samples_proj[pool_slice][easy_samples_list] = torch.tensor(float('inf'))
                         rejected_flag[easy_samples_list] = 1
 
-                    gen.module.dci_db.clear()
+                    self.gpu_index_flat.reset()
                     
                     total_rejected += rejected_flag.sum().item()
         
@@ -460,11 +467,11 @@ class Sampler:
         with torch.no_grad():
             for i in range(self.pool_size // self.H.imle_db_size):
                 pool_slice = slice(i * self.H.imle_db_size, (i + 1) * self.H.imle_db_size)
-                if not gen.module.dci_db:
-                    device_count = torch.cuda.device_count()
-                    gen.module.dci_db = MDCI(self.dci_dim, num_comp_indices=self.H.num_comp_indices,
-                                                num_simp_indices=self.H.num_simp_indices, devices=[i for i in range(device_count)])
-                gen.module.dci_db.add(self.pool_samples_proj[pool_slice])
+                # if not gen.module.dci_db:
+                #     device_count = torch.cuda.device_count()
+                #     gen.module.dci_db = MDCI(self.dci_dim, num_comp_indices=self.H.num_comp_indices,
+                #                                 num_simp_indices=self.H.num_simp_indices, devices=[i for i in range(device_count)])
+                self.gpu_index_flat.add(self.pool_samples_proj[pool_slice])
                 pool_latents = self.pool_latents[pool_slice]
                 snoise_pool = [b[pool_slice] for b in self.snoise_pool]
 
@@ -474,10 +481,11 @@ class Sampler:
                     batch_slice = slice(ind * self.H.imle_batch, ind * self.H.imle_batch + target.shape[0])
                     indices = to_update[batch_slice]
                     x = self.dataset_proj[indices]
-                    nearest_indices, dci_dists = gen.module.dci_db.query(x.float(), num_neighbours=1)
-                    nearest_indices = nearest_indices.long()[:, 0]
-                    nearest_indices = nearest_indices.cpu()
-                    dci_dists = dci_dists[:, 0]
+
+                    query = x.cpu().numpy().astype('float32')
+                    dci_dists, nearest_indices = self.gpu_index_flat.search(query, 1)
+                    dci_dists = torch.from_numpy(dci_dists).squeeze(1)  # (local_size,)
+                    nearest_indices = torch.from_numpy(nearest_indices).squeeze(1).long().cpu()    # (local_size,)
 
                     need_update = dci_dists < self.selected_dists_tmp[indices]
                     need_update = need_update.cpu()
@@ -488,7 +496,7 @@ class Sampler:
                     for j in range(len(self.res)):
                         self.selected_snoise[j][global_need_update] = snoise_pool[j][nearest_indices[need_update]].clone()
 
-                gen.module.dci_db.clear()
+                self.gpu_index_flat.reset()
 
                 if i % 100 == 0:
                     print("NN calculated for {} out of {} - {}".format((i + 1) * self.H.imle_db_size, self.pool_size, time.time() - t0))

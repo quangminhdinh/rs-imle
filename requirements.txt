@@ -1,7 +1,7 @@
-scipy==1.11.1
+scipy
 clean_fid==0.1.35
 comet_ml
-imageio==2.9.0
+imageio
 numpy
 pandas
 torch
@@ -9,3 +9,4 @@ scikit_learn
 torchvision
 tqdm==4.64.0
 wandb
+faiss-gpu
