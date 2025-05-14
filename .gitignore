@@ -1,0 +1,13 @@
+*.zip
+
+*.lock
+*.toml
+*.python-version
+.venv
+.venv/*
+*.nojekyll
+
+datasets
+datasets/*
+__MACOSX
+__MACOSX/*

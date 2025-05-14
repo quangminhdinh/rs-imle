@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+from PIL import Image
 import os
 import torch
 from torch.utils.data import TensorDataset, DataLoader
@@ -165,11 +166,22 @@ def ffhq1024(data_root):
 
 
 def ffhq256(data_root):
-    trX = np.load(os.path.join(data_root, 'ffhq-256.npy'), mmap_mode='r')
+    # trX = np.load(os.path.join(data_root, 'ffhq-256.npy'), mmap_mode='r')
     np.random.seed(5)
+    # tr_va_split_indices = np.random.permutation(trX.shape[0])
+    # train = trX[tr_va_split_indices[:-7000]]
+    # valid = trX[tr_va_split_indices[-7000:]]
+    trX = []
+    parent = os.path.join(data_root, "img")
+    for fn in os.listdir(parent):
+        img = Image.open(os.path.join(parent, fn))
+        trX.append(np.asarray(img))
+
+    trX = np.stack(trX)
     tr_va_split_indices = np.random.permutation(trX.shape[0])
-    train = trX[tr_va_split_indices[:-7000]]
-    valid = trX[tr_va_split_indices[-7000:]]
+    train = trX[tr_va_split_indices[:-20]]
+    valid = trX[tr_va_split_indices[-20:]]
+
     # we did not significantly tune hyperparameters on ffhq-256, and so simply evaluate on the test set
     return train, valid, valid
 

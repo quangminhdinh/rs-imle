@@ -1,4 +1,4 @@
-from distutils.util import strtobool
+# from distutils.util import strtobool
 
 HPARAMS_REGISTRY = {}
 
@@ -105,17 +105,17 @@ def add_imle_arguments(parser):
     parser.add_argument('--num_images_to_generate', type=int, default=100)
     parser.add_argument('--mode', type=str, default='train')  # mode of running, train, eval, reconstruct, generate
     
-    parser.add_argument('--use_snoise', default=False, type=lambda x: bool(strtobool(x)))  # whether to use spatial noise
+    parser.add_argument('--use_snoise', default=False, type=lambda x: bool(x))  # whether to use spatial noise
     parser.add_argument('--search_type', type=str, default='l2', choices=['lpips', 'l2', 'combined']) # search type for nearest neighbour search
     parser.add_argument('--l2_search_downsample', type=float, default=1.0) # downsample factor for l2 search
 
     # RSIMLE specific arguments
-    parser.add_argument('--use_rsimle', default=True, type=lambda x: bool(strtobool(x)))  # whether to use spatial noise
+    parser.add_argument('--use_rsimle', default=True, type=lambda x: bool(x))  # whether to use spatial noise
     parser.add_argument('--eps_radius', type=float, default=0.12)  # hyperparameter for RSIMLE, i.e., \epsilon in the paper
     parser.add_argument('--knn_ignore', type=int, default=5)  # knn ignore for RSIMLE
 
     # AdaIMLE specific arguments
-    parser.add_argument('--use_adaptive', default=False, type=lambda x: bool(strtobool(x)))  # whether to use adaptive imle
+    parser.add_argument('--use_adaptive', default=False, type=lambda x: bool(x))  # whether to use adaptive imle
     parser.add_argument('--change_coef', type=float, default=0.04)  # \gamma in the AdaIMLE paper, rate of change of the thresholds, tau_i
     parser.add_argument('--change_threshold', type=float, default=1)  # starting threshold
     parser.add_argument('--imle_staleness', type=int, default=7)  # imle staleness, i.e., number of iterations to wait before considering the thresholds, tau_i
@@ -128,7 +128,7 @@ def add_imle_arguments(parser):
     parser.add_argument('--wandb_mode', type=str, default='online')
 
     # comet.ml
-    parser.add_argument('--use_comet', default=False, type=lambda x: bool(strtobool(x)))
+    parser.add_argument('--use_comet', default=False, type=lambda x: bool(x))
     parser.add_argument('--comet_name', type=str, default='AdaptiveIMLE')  # used in comet.ml
     parser.add_argument('--comet_api_key', type=str, default='')  # comet.ml api key -- leave blank to disable comet.ml
     parser.add_argument('--comet_experiment_key', type=str, default='')
