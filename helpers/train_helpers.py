@@ -90,7 +90,7 @@ def first_rank_first(local_rank, mpi_size):
 def setup_save_dirs(H):
     H.save_dir = os.path.join(H.save_dir, H.desc)
     mkdir_p(H.save_dir)
-    mkdir_p(f'H.save_dir/fid')
+    mkdir_p(f'{H.save_dir}/fid')
     H.logdir = os.path.join(H.save_dir, 'log')
 
 

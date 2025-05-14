@@ -7,6 +7,7 @@ import time
 import subprocess
 import torch.distributed as dist
 import torch.utils.data as data
+from PIL import Image
 
 
 
@@ -139,6 +140,23 @@ def gpus_per_node():
 
 def local_mpi_rank():
     return mpi_rank() % gpus_per_node()
+
+
+def pad_resize(img, size):
+    h, w, _ = img.shape
+    if h > w:
+        gap = h - w
+        side = gap // 2
+        img_t = np.pad(img, ((0, 0), (side, gap - side), (0, 0)))
+    elif w > h:
+        gap = w - h
+        side = gap // 2
+        img_t = np.pad(img, ((side, gap - side), (0, 0), (0, 0)))
+    else:
+        img_t = img
+    im = Image.fromarray(img_t)
+    im2 = im.resize((size, size))
+    return np.asarray(im2)
 
 
 # def printGPUInfo(prefix=""):

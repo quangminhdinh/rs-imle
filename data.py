@@ -8,8 +8,10 @@ from torchvision.datasets import ImageFolder
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
+from datasets import load_dataset
 
 from models import parse_layer_string
+from helpers.utils import pad_resize
 
 
 def set_up_data(H):
@@ -31,6 +33,11 @@ def set_up_data(H):
         H.image_channels = 3
         shift = -116.2373
         scale = 1. / 69.37404
+    elif H.dataset == 'flowers102-i':
+        trX, vaX, teX = flowers102_img(H.image_size)
+        H.image_channels = 3
+        shift = -112.8666757481         # 71.93867001005759         93.6042881894389
+        scale = 1. / 69.84780273        # 73.66214571500137         65.3031711042093
     elif H.dataset == 'imagenet64':
         trX, vaX, teX = imagenet64(H.data_root)
         H.image_size = 64
@@ -179,11 +186,25 @@ def ffhq256(data_root):
         trX.append(np.asarray(img))
 
     trX = np.stack(trX)
+    # .transpose(0, 2, 3, 1) ?
     tr_va_split_indices = np.random.permutation(trX.shape[0])
     train = trX[tr_va_split_indices[:-20]]
     valid = trX[tr_va_split_indices[-20:]]
 
     # we did not significantly tune hyperparameters on ffhq-256, and so simply evaluate on the test set
+    return train, valid, valid
+
+
+def flowers102_img(img_size):
+    ds = load_dataset("efekankavalci/flowers102-captions", split="train")
+    trX = []
+    for i in tqdm(range(len(ds)), desc="Preprocessing flowers102-i:"):
+        trX.append(pad_resize(np.asarray(ds[i]["image"]), img_size))
+    trX = np.stack(trX) # b, h, w, c
+    test_num = trX.shape[0] // 10
+    tr_va_split_indices = np.random.permutation(trX.shape[0])
+    train = trX[tr_va_split_indices[:-test_num]]
+    valid = trX[tr_va_split_indices[-test_num:]]
     return train, valid, valid
 
 
