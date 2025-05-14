@@ -124,7 +124,7 @@ def add_imle_arguments(parser):
     # wandb
     parser.add_argument('--wandb_name', type=str, default='AdaptiveIMLE')  # used for wandb
     parser.add_argument('--wandb_project', type=str, default='AdaptiveIMLE')  # used for wandb
-    parser.add_argument('--use_wandb', type=int, default=0)
+    parser.add_argument('--use_wandb', type=int, default=1)
     parser.add_argument('--wandb_mode', type=str, default='online')
 
     # comet.ml

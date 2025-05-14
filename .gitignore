@@ -11,3 +11,12 @@ datasets
 datasets/*
 __MACOSX
 __MACOSX/*
+
+__pycache__
+__pycache__/*
+
+wandb
+wandb/*
+
+new-vanilla-results
+new-vanilla-results/*

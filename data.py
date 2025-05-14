@@ -7,6 +7,7 @@ from torch.utils.data import TensorDataset, DataLoader
 from torchvision.datasets import ImageFolder
 import torchvision.transforms as transforms
 from sklearn.model_selection import train_test_split
+from tqdm import tqdm
 
 from models import parse_layer_string
 
@@ -173,7 +174,7 @@ def ffhq256(data_root):
     # valid = trX[tr_va_split_indices[-7000:]]
     trX = []
     parent = os.path.join(data_root, "img")
-    for fn in os.listdir(parent):
+    for fn in tqdm(os.listdir(parent), desc="Preprocessing ffhq256:"):
         img = Image.open(os.path.join(parent, fn))
         trX.append(np.asarray(img))
 

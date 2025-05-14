@@ -449,10 +449,11 @@ class Sampler:
                         x = self.dataset_proj[indices]
                         query = x.cpu().numpy().astype('float32')
                         dci_dists, nearest_indices = self.gpu_index_flat.search(query, 1)
-                        dci_dists = torch.from_numpy(dci_dists).squeeze(1)  # (local_size,)
-                        nearest_indices   = torch.from_numpy(nearest_indices).squeeze(1).long()    # (local_size,)
+                        dci_dists = torch.from_numpy(dci_dists).squeeze(1).cuda()  # (local_size,)
+                        nearest_indices   = torch.from_numpy(nearest_indices).squeeze(1).long().cpu()    # (local_size,)
 
                         check = dci_dists < self.H.eps_radius 
+                        check = check.cpu()
                         easy_samples_list = torch.unique(nearest_indices[check])
                         self.pool_samples_proj[pool_slice][easy_samples_list] = torch.tensor(float('inf'))
                         rejected_flag[easy_samples_list] = 1
@@ -484,7 +485,7 @@ class Sampler:
 
                     query = x.cpu().numpy().astype('float32')
                     dci_dists, nearest_indices = self.gpu_index_flat.search(query, 1)
-                    dci_dists = torch.from_numpy(dci_dists).squeeze(1)  # (local_size,)
+                    dci_dists = torch.from_numpy(dci_dists).squeeze(1).cuda()  # (local_size,)
                     nearest_indices = torch.from_numpy(nearest_indices).squeeze(1).long().cpu()    # (local_size,)
 
                     need_update = dci_dists < self.selected_dists_tmp[indices]
