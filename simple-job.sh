@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --account=def-keli
-#SBATCH --mem=32G
+#SBATCH --mem=128G
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
 #SBATCH --gres=gpu:v100l:1
@@ -9,7 +9,7 @@
 #SBATCH --mail-type=ALL
 
 cd $projects/rs-imle
-# module purge
+module purge
 module load StdEnv/2023 gcc cuda arrow faiss/1.8.0 python/3.11.5
 source ~/py311/bin/activate
 
@@ -18,5 +18,7 @@ python train.py --hps fewshot \
     --data_root /scratch/qmd/datasets/flowers_i/ \
     --dataset flowers102-i \
     --wandb_name rs_imle_ca \
+    --num_epochs 100 \
+    --n_batch 8 \
     --lr 0.0002 
 

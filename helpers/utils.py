@@ -159,6 +159,24 @@ def pad_resize(img, size):
     return np.asarray(im2)
 
 
+def crop_resize(img, size):
+    h, w, _ = img.shape
+    if h > w:
+        gap = h - w
+        side = gap // 2
+        img_t = img[side : side + w, ...]
+    elif w > h:
+        gap = w - h
+        side = gap // 2
+        img_t = img[:, side : side + h, :]
+    else:
+        img_t = img
+    assert img_t.shape[0] == img_t.shape[1]
+    im = Image.fromarray(img_t)
+    im2 = im.resize((size, size))
+    return np.asarray(im2)
+
+
 # def printGPUInfo(prefix=""):
 #     print(prefix, end=" ")
 #     deviceCount = pynvml.nvmlDeviceGetCount()

@@ -20,3 +20,5 @@ wandb/*
 
 new-vanilla-results
 new-vanilla-results/*
+
+*.out

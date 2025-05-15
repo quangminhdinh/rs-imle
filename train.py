@@ -8,6 +8,7 @@ import wandb
 import torch.nn as nn
 from cleanfid import fid
 from torch.utils.data import DataLoader, TensorDataset
+import psutil
 
 from data import set_up_data
 from helpers.imle_helpers import backtrack, reconstruct
@@ -57,6 +58,12 @@ def train_loop_imle(H, data_train, data_valid, preprocess_fn, imle, ema_imle, lo
         break
 
     optimizer, scheduler, _, iterate, starting_epoch = load_opt(H, imle, logprint)
+    process = psutil.Process()
+    print(f"CPU footprint: {process.memory_info().rss}")
+    t = torch.cuda.get_device_properties(0).total_memory
+    r = torch.cuda.memory_reserved(0)
+    a = torch.cuda.memory_allocated(0)
+    print(f"GPU memory usage:\n\tTotal: {t}\n\tReserved: {r}\n\tAllocated:{a}")
 
     print("Starting epoch: ", starting_epoch)
     print("Starting iteration: ", iterate)
@@ -67,6 +74,7 @@ def train_loop_imle(H, data_train, data_valid, preprocess_fn, imle, ema_imle, lo
     subset_len = H.subset_len
     if subset_len == -1:
         subset_len = len(data_train)
+    print("Reach sampler")
 
     sampler = Sampler(H, subset_len, preprocess_fn)
 
@@ -384,7 +392,7 @@ def main(H=None):
 
 
     elif H.mode == 'train':
-        print(H)
+        # print(H)
         train_loop_imle(H, data_train, data_valid_or_test, preprocess_fn, imle, ema_imle, logprint, experiment)
 
     elif H.mode == 'ppl':

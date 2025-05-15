@@ -11,7 +11,7 @@ from tqdm import tqdm
 from datasets import load_dataset
 
 from models import parse_layer_string
-from helpers.utils import pad_resize
+from helpers.utils import crop_resize
 
 
 def set_up_data(H):
@@ -199,7 +199,7 @@ def flowers102_img(img_size):
     ds = load_dataset("efekankavalci/flowers102-captions", split="train")
     trX = []
     for i in tqdm(range(len(ds)), desc="Preprocessing flowers102-i:"):
-        trX.append(pad_resize(np.asarray(ds[i]["image"]), img_size))
+        trX.append(crop_resize(np.asarray(ds[i]["image"]), img_size))
     trX = np.stack(trX) # b, h, w, c
     test_num = trX.shape[0] // 10
     tr_va_split_indices = np.random.permutation(trX.shape[0])
