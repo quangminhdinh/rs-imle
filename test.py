@@ -1,13 +1,8 @@
-from PIL import Image
-import numpy as np
-import os
+import wandb
 
-p = "/home/minhdq/rs-imle/datasets/100-shot-panda/img"
-dat = []
-flist = os.listdir(p)
-
-for fn in flist:
-    img = Image.open(os.path.join(p, fn))
-    dat.append(np.asarray(img))
-
-print(np.stack(dat).shape)
+wandb.init(
+            name="test",
+            project="test prj",
+            config={"lol": 1},
+            mode="online",
+        )

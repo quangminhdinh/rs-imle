@@ -1,7 +1,7 @@
 import os
 import time
 
-from comet_ml import Experiment, ExistingExperiment
+# from comet_ml import Experiment, ExistingExperiment
 import imageio
 import torch
 import wandb
@@ -284,7 +284,7 @@ def main(H=None):
     H, data_train, data_valid_or_test, preprocess_fn = set_up_data(H)
     imle, ema_imle = load_imle(H, logprint)
 
-    if H.use_comet and H.comet_api_key:
+    if False and H.use_comet and H.comet_api_key:
         if(H.comet_experiment_key):
             print("Resuming experiment")
             experiment = ExistingExperiment(
